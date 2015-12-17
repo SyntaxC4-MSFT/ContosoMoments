@@ -49,7 +49,7 @@
     "storageAccountName": {
       "type": "string",
       "metadata": {
-        "description": "The name of the storage account that you wish to create."
+        "description": "The name of the storage account that you wish to create. Note: This must be lowercase."
       }
     },
     "storageAccountType": {
@@ -93,7 +93,7 @@
     },
     "siteName": {
       "type": "string",
-      "defaultValue": "ContosoMomentsWeb",
+      "defaultValue": "contosomomentsweb",
       "metadata": {
         "description": "The name of the web client app that you wish to create."
       }
@@ -125,15 +125,29 @@
       "metadata": {
         "description": "Use any valid URL."
       }
+    },
+    "repoURL": {
+      "type": "string",
+      "metadata": {
+        "description": "Repo URL."
+      }
+    },
+    "branch": {
+      "type": "string",
+      "defaultValue": "stable",
+      "metadata": {
+        "description": "Branch"
+      }
     }
   },
   "variables": {
-    "webJobSiteName":  "[concat(parameters('siteName'), '-jobs')]"
+    "webJobSiteName": "[concat(parameters('siteName'), '-jobs')]",
+    "storageAccountName": "[toLower(parameters('storageAccountName'))]"
   },
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "name": "[parameters('storageAccountName')]",
+      "name": "[variables('storageAccountName')]",
       "apiVersion": "2015-05-01-preview",
       "location": "[parameters('siteLocation')]",
       "properties": {
@@ -163,6 +177,19 @@
             "edition": "Basic",
             "maxSizeBytes": "2147483648"
           }
+        },
+        {
+          "apiVersion": "2.0",
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', parameters('sqlServerName'))]"
+          ],
+          "location": "[parameters('siteLocation')]",
+          "name": "AllowAllWindowsAzureIps",
+          "properties": {
+            "endIpAddress": "0.0.0.0",
+            "startIpAddress": "0.0.0.0"
+          },
+          "type": "firewallrules"
         }
       ]
     },
@@ -179,14 +206,14 @@
     },
 
     {
-      "apiVersion": "2014-04-01",
+      "apiVersion": "2015-08-01",
       "type": "Microsoft.Web/sites",
       "name": "[parameters('siteName')]",
       "location": "[parameters('siteLocation')]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/serverFarms/', parameters('hostingPlanName'))]",
         "[resourceId('Microsoft.Sql/servers/', parameters('sqlServerName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
         "name": "[parameters('siteName')]",
@@ -194,20 +221,26 @@
       },
       "resources": [
         {
-          "apiVersion": "2014-04-01",
+          "apiVersion": "2015-08-01",
           "type": "config",
           "name": "web",
           "dependsOn": [
             "[concat('Microsoft.Web/sites/', parameters('siteName'))]"
           ],
+          "properties": { }
+        },
+        {
+          "apiVersion": "2015-08-01",
+          "type": "config",
+          "name": "connectionstrings",
+          "dependsOn": [
+            "[concat('Microsoft.Web/sites/', parameters('siteName'))]"
+          ],
           "properties": {
-            "connectionStrings": [
-              {
-                "ConnectionString": "[concat('Server=tcp:', reference(concat('Microsoft.Sql/servers/', parameters('sqlServerName'))).fullyQualifiedDomainName, ',1433;Database=', parameters('sqlDbName'), ';User Id=', parameters('sqlAdministratorLogin'), '@', parameters('sqlServerName'), ';Password=', parameters('dbAdminPassword'), ';')]",
-                "Name": "MS_TableConnectionString",
-                "Type": 2
-              }
-            ]
+            "MS_TableConnectionString": {
+              "type": "SQLServer",
+              "value": "[concat('Server=tcp:', reference(concat('Microsoft.Sql/servers/', parameters('sqlServerName'))).fullyQualifiedDomainName, ',1433;Database=', parameters('sqlDbName'), ';User Id=', parameters('sqlAdministratorLogin'), '@', parameters('sqlServerName'), ';Password=', parameters('dbAdminPassword'), ';')]"
+            }
           }
         },
         {
@@ -218,41 +251,40 @@
             "[concat('Microsoft.Web/sites/', parameters('siteName'))]"
           ],
           "properties": {
-            "StorageAccountName": "[parameters('storageAccountName')]",
-            "StorageAccountKey": "[concat('',listKeys(resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName')), '2015-05-01-preview').key1)]",
+            "StorageAccountName": "[variables('storageAccountName')]",
+            "StorageAccountKey": "[concat('',listKeys(resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName')), '2015-05-01-preview').key1)]",
             "UploadSasDaysTime": "5",
             "ResizeQueueName": "[parameters('ResizeQueueName')]",
             "UploadContainerName": "[parameters('storageContainerName')]",
             "FacebookAuthString": "[parameters('FacebookAuthString')]",
             "DefaultUserId": "[parameters('DefaultUserId')]",
             "DefaultAlbumId": "[parameters('DefaultAlbumId')]",
-            "DefaultServiceURL": "[concat('http://', parameters('siteName'), '.azurewebsites.net')]",
+            "DefaultServiceURL": "[concat('http://', parameters('siteName'), '.azurewebsites.net/')]",
             "PROJECT": "ContosoMoments\\Cloud\\ContosoMoments.MobileServer\\ContosoMoments.MobileServer.csproj"
           }
         },
         {
-          "apiVersion":"2015-04-01",
-          "name":"web",
-          "type":"sourcecontrols",
-          "dependsOn":[
+          "apiVersion": "2015-08-01",
+          "name": "web",
+          "type": "sourcecontrols",
+          "dependsOn": [
             "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
           ],
-          "properties":{
-            "RepoUrl":"https://github.com/azure-appservice-samples/ContosoMoments.git",
-            "branch":"stable"
+          "properties": {
+            "RepoUrl": "[parameters('repoUrl')]",
+            "branch": "[parameters('branch')]"
           }
         }
       ]
     },
-
     {
-      "apiVersion": "2014-04-01",
+      "apiVersion": "2015-08-01",
       "type": "Microsoft.Web/sites",
       "name": "[variables('webJobSiteName')]",
       "location": "[parameters('siteLocation')]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/serverFarms/', parameters('hostingPlanName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
         "name": "[variables('webJobSiteName')]",
@@ -264,24 +296,24 @@
           "type": "config",
           "name": "appsettings",
           "dependsOn": [
-            "[concat('Microsoft.Web/sites/', variables('webJobSiteName'))]"
+            "[resourceId('Microsoft.Web/Sites', variables('webJobSiteName'))]"
           ],
           "properties": {
-            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName')), '2015-05-01-preview').key1)]",
-            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName')), '2015-05-01-preview').key1)]",
+            "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName')), '2015-05-01-preview').key1)]",
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName')), '2015-05-01-preview').key1)]",
             "PROJECT": "ContosoMoments\\ContosoMoments.WebJobs\\ContosoMoments.WebJobs.csproj"
           }
         },
         {
-          "apiVersion":"2015-04-01",
-          "name":"web",
-          "type":"sourcecontrols",
-          "dependsOn":[
-            "[resourceId('Microsoft.Web/Sites', parameters('siteName'))]"
+          "apiVersion": "2015-08-01",
+          "name": "web",
+          "type": "sourcecontrols",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/Sites', variables('webJobSiteName'))]"
           ],
-          "properties":{
-            "RepoUrl":"https://github.com/azure-appservice-samples/ContosoMoments.git",
-            "branch":"stable"
+          "properties": {
+            "RepoUrl": "[parameters('repoUrl')]",
+            "branch": "[parameters('branch')]"
           }
         }
       ]
