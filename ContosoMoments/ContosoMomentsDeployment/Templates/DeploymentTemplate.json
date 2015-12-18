@@ -234,7 +234,9 @@
           "type": "config",
           "name": "connectionstrings",
           "dependsOn": [
-            "[concat('Microsoft.Web/sites/', parameters('siteName'))]"
+            "[concat('Microsoft.Web/sites/', parameters('siteName'))]",
+            "[resourceId('Microsoft.Sql/servers/', parameters('sqlServerName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
           ],
           "properties": {
             "MS_TableConnectionString": {
@@ -248,7 +250,9 @@
           "type": "config",
           "name": "appsettings",
           "dependsOn": [
-            "[concat('Microsoft.Web/sites/', parameters('siteName'))]"
+            "[concat('Microsoft.Web/sites/', parameters('siteName'))]",
+            "[resourceId('Microsoft.Sql/servers/', parameters('sqlServerName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
           ],
           "properties": {
             "StorageAccountName": "[variables('storageAccountName')]",
@@ -296,7 +300,9 @@
           "type": "config",
           "name": "appsettings",
           "dependsOn": [
-            "[resourceId('Microsoft.Web/Sites', variables('webJobSiteName'))]"
+            "[resourceId('Microsoft.Web/Sites', variables('webJobSiteName'))]",
+            "[resourceId('Microsoft.Sql/servers/', parameters('sqlServerName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
           ],
           "properties": {
             "AzureWebJobsDashboard": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts/', parameters('storageAccountName')), '2015-05-01-preview').key1)]",
