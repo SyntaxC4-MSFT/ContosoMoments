@@ -1,6 +1,8 @@
 ﻿using System.ComponentModel;
+using System.Diagnostics;
 using Microsoft.WindowsAzure.MobileServices.Files;
 using Newtonsoft.Json;
+using PCLStorage;
 
 namespace ContosoMoments.Models
 {
@@ -16,6 +18,7 @@ namespace ContosoMoments.Models
 
         private string _uri;
         private MobileServiceFile _file;
+        private bool _imageLoaded;
 
         [JsonIgnore]
         public MobileServiceFile File
@@ -36,7 +39,18 @@ namespace ContosoMoments.Models
         [JsonIgnore]
         public string Uri
         {
-            get { return _uri; }
+            get
+            {
+                if (ImageLoaded) {
+                    Debug.WriteLine("+++ Uri: " + Uri);
+                    return _uri;
+                }
+                else {
+                    Debug.WriteLine("+++ Uri does not exist");
+                    return "";
+                }
+            }
+
             set
             {
                 _uri = value;
@@ -44,9 +58,23 @@ namespace ContosoMoments.Models
             }
         }
 
+        [JsonIgnore]
+        public bool ImageLoaded
+        {
+            get { return _imageLoaded; }
+            set
+            {
+                Debug.WriteLine($"Set ImageLoaded: {value}");
+
+                _imageLoaded = value;
+                OnPropertyChanged(nameof(ImageLoaded));
+                OnPropertyChanged(nameof(Uri));
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private void OnPropertyChanged(string propertyName)
+        public void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }

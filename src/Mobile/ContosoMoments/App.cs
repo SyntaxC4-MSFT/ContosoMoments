@@ -160,21 +160,57 @@ namespace ContosoMoments
 
         internal Task DownloadFileAsync(MobileServiceFile file)
         {
-            IPlatform platform = DependencyService.Get<IPlatform>();
-
             lock (currentDownloadTaskLock) {
-                return currentDownloadTask =
-                    currentDownloadTask.ContinueWith(
-                    x => {
-                        var path = FileHelper.GetLocalFilePathAsync(file.ParentId, file.Name).Result;
-
-                        Debug.WriteLine("Starting file download - " + file.Name);
-                        platform.DownloadFileAsync(imageTableSync, file, file.Name).Wait();
-                        Debug.WriteLine("Completed file download - " + file.Name);
-                    }
-                );
+                return currentDownloadTask = 
+                    currentDownloadTask.ContinueWith(async x => await DoFileDownload(file));
             }
         }
+
+        private async Task DoFileDownload(MobileServiceFile file)
+        {
+            Debug.WriteLine("Starting file download - " + file.Name);
+
+            IPlatform platform = DependencyService.Get<IPlatform>();
+            var path = await FileHelper.GetLocalFilePathAsync(file.ParentId, file.Name);
+            var tempPath = Path.ChangeExtension(path, ".temp");
+
+            await platform.DownloadFileAsync(imageTableSync, file, tempPath);
+            Debug.WriteLine("Completed file download - " + tempPath);
+
+            var fileRef = await FileSystem.Current.LocalStorage.GetFileAsync(tempPath);
+            await fileRef.RenameAsync(path, NameCollisionOption.ReplaceExisting);
+            Debug.WriteLine("Renamed file to: " + path);
+
+            await MobileService.EventManager.PublishAsync(new MobileServiceEvent(file.ParentId));
+            Debug.WriteLine($"Published image download event: {file.ParentId}");
+        }
+
+
+        // method is synchronous -- should be called from ContinueWith
+        //private void DoFileDownload(MobileServiceFile file)
+        //{
+        //    Debug.WriteLine("Starting file download - " + file.Name);
+
+        //    IPlatform platform = DependencyService.Get<IPlatform>();
+        //    //var path = FileHelper.GetLocalFilePathAsync(file.ParentId, file.Name).Result;
+        //    //var tempPath = Path.ChangeExtension(path, ".temp");
+
+        //    //platform.DownloadFileAsync(imageTableSync, file, file.Name).Wait();
+        //    //Debug.WriteLine("Completed file download - " + tempPath);
+
+        //    //var fileRef = FileSystem.Current.LocalStorage.GetFileAsync(tempPath).Result;
+        //    //fileRef.RenameAsync(path, NameCollisionOption.ReplaceExisting).Wait();
+        //    //Debug.WriteLine("Renamed file to: " + path);
+
+        //    // this call doesn't need to be awaited, since there isn't anything that needs to wait for its completion
+        //    Debug.WriteLine("Completed file download - " + file.Name);
+
+        //    var image = imageTableSync.LookupAsync(file.ParentId).Result;
+        //    image.ImageLoaded = true;
+        //    imageTableSync.UpdateAsync(image);
+
+        //    MobileService.EventManager.PublishAsync(new MobileServiceEvent(file.ParentId));
+        //}
 
         internal async Task<MobileServiceFile> AddImage(Models.User user, Models.Album album, string sourceFile)
         {

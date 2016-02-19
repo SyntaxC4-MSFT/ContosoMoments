@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Diagnostics;
 using Microsoft.WindowsAzure.MobileServices.Files;
+using Microsoft.WindowsAzure.MobileServices.Sync;
+using Microsoft.WindowsAzure.MobileServices.Eventing;
+using PCLStorage;
 
 namespace ContosoMoments.ViewModels
 {
@@ -19,6 +22,18 @@ namespace ContosoMoments.ViewModels
         {
             _client = client;
             _app = app;
+
+            App.MobileService.EventManager.Subscribe<MobileServiceEvent>(DownloadStatusObserver);
+        }
+
+        private void DownloadStatusObserver(MobileServiceEvent obj)
+        {
+            var image = Images.Find(x => x.Id == obj.Name);
+            Debug.WriteLine($"Image changed: {image?.Id}");
+
+            if (image != null) {
+                image.ImageLoaded = true;
+            }
         }
 
         private List<Image> _images;
@@ -73,6 +88,10 @@ namespace ContosoMoments.ViewModels
                 foreach (var im in this.Images) {
                     var result = await _app.imageTableSync.GetFilesAsync(im);
                     im.File = result.FirstOrDefault();
+                    string filePath = await FileHelper.GetLocalFilePathAsync(im.Id, im.File.Name);
+                    im.ImageLoaded = await FileSystem.Current.LocalStorage.CheckExistsAsync(
+                        filePath) == ExistenceCheckResult.FileExists;
+                    Debug.WriteLine($"ImageLoaded: {im.Id}    {im.ImageLoaded}");
                 }
             }
             catch (Exception ex) {
