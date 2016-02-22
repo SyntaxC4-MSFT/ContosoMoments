@@ -343,7 +343,7 @@
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites/', variables('webJobSiteName'))]",
             "[concat('Microsoft.Web/sites/', variables('webJobSiteName'), '/config/appsettings')]",
-            "[concat('Microsoft.Web/sites/', variables('siteName'), '/sourcecontrols/web')]"
+            "[concat('Microsoft.Web/sites/', parameters('siteName'), '/sourcecontrols/web')]"
           ],
           "properties": {
             "RepoUrl": "[parameters('repoUrl')]",
