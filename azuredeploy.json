@@ -149,7 +149,7 @@
             "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
           ],
           "location": "[parameters('siteLocation')]",
-          "name": "AllowAllWindowsAzureIps",
+          "name": "AllowAllInternalIps",
           "properties": {
             "endIpAddress": "0.0.0.0",
             "startIpAddress": "0.0.0.0"
@@ -261,7 +261,7 @@
         {
           "apiVersion": "2015-01-01",
           "type": "providers/links",
-          "name": "Microsoft.Resources/mobile-notificationhub",
+          "name": "pushnotifications",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', parameters('siteName'))]",
             "[resourceId('Microsoft.NotificationHubs/namespaces/NotificationHubs', variables('notificationHubNamespace'), variables('NotificationHubName'))]"
