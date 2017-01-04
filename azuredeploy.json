@@ -255,7 +255,7 @@
             "DefaultAlbumId": "[variables('DefaultAlbumId')]",
             "DefaultServiceURL": "[concat('http://', parameters('siteName'), '.azurewebsites.net/')]",
             "MS_NotificationHubName": "[variables('NotificationHubName')]",
-            "MS_NotificationHubConnectionString": "[listkeys(resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/authorizationRules', variables('notificationHubNamespace'), variables('NotificationHubName'), 'DefaultFullSharedAccessSignature'), '2014-09-01').primaryConnectionString]"
+            "MS_NotificationHubConnectionString": "[listkeys(resourceId('Microsoft.NotificationHubs/namespaces/notificationHubs/authorizationRules', variables('notificationHubNamespace'), variables('NotificationHubName'), 'DefaultFullSharedAccessSignature'), '2014-09-01').primaryConnectionString]",
             "enableSoftDelete": "true",
             "PROJECT": "src\\Cloud\\ContosoMoments.API\\ContosoMoments.API.csproj"
           }
